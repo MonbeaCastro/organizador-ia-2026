@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="es" class="h-full">
 <head>
     <meta charset="UTF-8">
@@ -43,7 +43,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight">2026 UPATECO Organizador de Cursada</h1>
-                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-cloud text-[10px]"></i> Sincronizando</span></p>
+                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer hover:bg-brand-800" onclick="openSyncModal()" title="Configurar PIN de Sincronización"><i class="fa-solid fa-cloud text-[10px]"></i> <span id="sync-label">Sincronizando</span></span></p>
                 </div>
             </div>
             
@@ -61,12 +61,40 @@
                 <button onclick="switchTab('horarios')" id="btn-tab-horarios" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
                     <i class="fa-solid fa-calendar-days mr-2"></i> Horarios & Zoom
                 </button>
+                <button onclick="openSyncModal()" title="Vincular Dispositivos por PIN" class="p-2 bg-brand-700 hover:bg-brand-600 text-white rounded-lg transition" id="btn-sync-pin">
+                    <i class="fa-solid fa-key"></i>
+                </button>
                 <button onclick="resetData()" title="Restablecer datos" class="p-2 bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition">
                     <i class="fa-solid fa-rotate-right"></i>
                 </button>
             </div>
         </div>
     </header>
+
+    <!-- MODAL DE SINCRONIZACIÓN POR PIN -->
+    <div id="sync-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 max-w-md w-full rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                    <i class="fa-solid fa-cloud-arrow-up text-brand-500"></i> Vincular Celular y PC
+                </h3>
+                <button onclick="closeSyncModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Para que tu computadora y tu celular compartan exactamente los mismos datos en tiempo real, ingresa un <strong>Código PIN secreto</strong> (ej: <code>ia2026pc</code> o tu número preferido). Úsalo en ambos dispositivos.
+            </p>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Tu PIN de Sincronización:</label>
+                <input type="text" id="sync-pin-input" placeholder="Ej. mi-cursada-ia" class="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-brand-500 outline-none font-mono">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeSyncModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-300 transition">Cancelar</button>
+                <button onclick="saveSyncPin()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold transition shadow-sm">Guardar y Vincular</button>
+            </div>
+        </div>
+    </div>
 
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8">
 
@@ -295,7 +323,7 @@
         let db = null;
         let auth = null;
         let userId = null;
-        let isCloudSynced = false;
+        let currentSyncPin = localStorage.getItem('ia_cursada_2026_pin') || 'default_user_2026';
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ia-cursada-2026';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -321,7 +349,7 @@
         }
 
         async function initFirebase() {
-            // Cargar inmediato desde LocalStorage para garantizar que nunca se pierda nada al recargar
+            // Cargar inmediato desde LocalStorage para que responda al instante
             const localStored = localStorage.getItem('ia_cursada_2026_data');
             if (localStored) {
                 try {
@@ -333,9 +361,10 @@
                 appData = getDefaultInitialData();
             }
             window.renderAll();
+            updateSyncLabel();
 
             if (!firebaseConfig) {
-                document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-hard-drive text-[10px]"></i> Modo Local';
+                document.getElementById('sync-label').innerText = 'Modo Local';
                 return;
             }
 
@@ -350,11 +379,11 @@
                     await signInAnonymously(auth);
                 }
 
-                userId = auth.currentUser?.uid || crypto.randomUUID();
+                userId = currentSyncPin; // Usamos el PIN personalizado como ID en Firestore
                 await loadCloudData();
             } catch (e) {
                 console.error("Firebase init error:", e);
-                document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Modo Local (Offline)';
+                document.getElementById('sync-label').innerText = 'Modo Local (Offline)';
             }
         }
 
@@ -369,8 +398,7 @@
                 } else {
                     await saveCloudData(false);
                 }
-                isCloudSynced = true;
-                document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-cloud text-[10px]"></i> Sincronizado en la nube';
+                document.getElementById('sync-label').innerText = `Sincronizado (PIN: ${currentSyncPin})`;
                 window.renderAll();
             } catch (e) {
                 console.error("Error loading cloud data:", e);
@@ -378,7 +406,6 @@
         }
 
         async function saveCloudData(notify = true) {
-            // Guardado local inmediato
             localStorage.setItem('ia_cursada_2026_data', JSON.stringify(appData));
             window.updateDashboardStats();
 
@@ -386,13 +413,43 @@
                 try {
                     const docRef = doc(db, 'artifacts', appId, 'users', userId, 'cursada', 'data');
                     await setDoc(docRef, appData);
-                    if (notify) window.showToast('Cambios guardados');
+                    if (notify) window.showToast('Sincronizado en la nube');
                 } catch (e) {
                     console.error("Error saving to cloud:", e);
+                    if (notify) window.showToast('Guardado localmente');
                 }
             } else {
                 if (notify) window.showToast('Cambios guardados localmente');
             }
+        }
+
+        window.openSyncModal = function() {
+            document.getElementById('sync-pin-input').value = currentSyncPin;
+            document.getElementById('sync-modal').classList.remove('hidden');
+        }
+
+        window.closeSyncModal = function() {
+            document.getElementById('sync-modal').classList.add('hidden');
+        }
+
+        window.saveSyncPin = async function() {
+            const val = document.getElementById('sync-pin-input').value.trim();
+            if (!val) {
+                alert('Por favor ingresa un PIN válido.');
+                return;
+            }
+            currentSyncPin = val;
+            localStorage.setItem('ia_cursada_2026_pin', currentSyncPin);
+            userId = currentSyncPin;
+            closeSyncModal();
+            updateSyncLabel();
+            window.showToast('PIN actualizado, sincronizando...');
+            await loadCloudData();
+        }
+
+        function updateSyncLabel() {
+            const lbl = document.getElementById('sync-label');
+            if (lbl) lbl.innerText = `PIN: ${currentSyncPin}`;
         }
 
         window.getAppData = () => appData;
