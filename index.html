@@ -43,7 +43,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight">2026 UPATECO Organizador de Cursada</h1>
-                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-cloud text-[10px]"></i> Sincronizando en la nube</span></p>
+                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-cloud text-[10px]"></i> Sincronizando</span></p>
                 </div>
             </div>
             
@@ -321,11 +321,21 @@
         }
 
         async function initFirebase() {
+            // Cargar inmediato desde LocalStorage para garantizar que nunca se pierda nada al recargar
+            const localStored = localStorage.getItem('ia_cursada_2026_data');
+            if (localStored) {
+                try {
+                    appData = JSON.parse(localStored);
+                } catch(e) {
+                    appData = getDefaultInitialData();
+                }
+            } else {
+                appData = getDefaultInitialData();
+            }
+            window.renderAll();
+
             if (!firebaseConfig) {
-                console.warn("Firebase config not available. Falling back to local state.");
-                appData = JSON.parse(localStorage.getItem('ia_cursada_2026_data')) || getDefaultInitialData();
                 document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-hard-drive text-[10px]"></i> Modo Local';
-                window.renderAll();
                 return;
             }
 
@@ -344,22 +354,19 @@
                 await loadCloudData();
             } catch (e) {
                 console.error("Firebase init error:", e);
-                appData = JSON.parse(localStorage.getItem('ia_cursada_2026_data')) || getDefaultInitialData();
-                document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Error de Sincronización';
-                window.renderAll();
+                document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Modo Local (Offline)';
             }
         }
 
         async function loadCloudData() {
             if (!db || !userId) return;
             try {
-                // RULE 1: Private user path in Firestore
                 const docRef = doc(db, 'artifacts', appId, 'users', userId, 'cursada', 'data');
                 const snap = await getDoc(docRef);
                 if (snap.exists()) {
                     appData = snap.data();
+                    localStorage.setItem('ia_cursada_2026_data', JSON.stringify(appData));
                 } else {
-                    appData = getDefaultInitialData();
                     await saveCloudData(false);
                 }
                 isCloudSynced = true;
@@ -367,13 +374,11 @@
                 window.renderAll();
             } catch (e) {
                 console.error("Error loading cloud data:", e);
-                appData = JSON.parse(localStorage.getItem('ia_cursada_2026_data')) || getDefaultInitialData();
-                window.renderAll();
             }
         }
 
         async function saveCloudData(notify = true) {
-            // Local backup
+            // Guardado local inmediato
             localStorage.setItem('ia_cursada_2026_data', JSON.stringify(appData));
             window.updateDashboardStats();
 
@@ -381,13 +386,12 @@
                 try {
                     const docRef = doc(db, 'artifacts', appId, 'users', userId, 'cursada', 'data');
                     await setDoc(docRef, appData);
-                    if (notify) window.showToast('Cambios guardados en la nube');
+                    if (notify) window.showToast('Cambios guardados');
                 } catch (e) {
                     console.error("Error saving to cloud:", e);
-                    if (notify) window.showToast('Guardado local (Sin conexión)');
                 }
             } else {
-                if (notify) window.showToast('Cambios guardados');
+                if (notify) window.showToast('Cambios guardados localmente');
             }
         }
 
@@ -439,17 +443,21 @@
             MATERIAS_CONFIG.forEach(m => {
                 const data = appData[m.id];
                 if (!data) return;
-                data.tps.forEach(tp => {
-                    totalTps++;
-                    if (tp.hecho) doneTps++;
-                });
+                if (data.tps) {
+                    data.tps.forEach(tp => {
+                        totalTps++;
+                        if (tp.hecho) doneTps++;
+                    });
+                }
                 if (data.parcial1 !== '' && !isNaN(parseFloat(data.parcial1))) totalNotas.push(parseFloat(data.parcial1));
                 if (data.parcial2 !== '' && !isNaN(parseFloat(data.parcial2))) totalNotas.push(parseFloat(data.parcial2));
                 if (data.recup1 !== '' && !isNaN(parseFloat(data.recup1))) totalNotas.push(parseFloat(data.recup1));
 
-                data.asistencias.forEach(a => {
-                    if (a.estado === 'docente_falta') totalFaltasDocente++;
-                });
+                if (data.asistencias) {
+                    data.asistencias.forEach(a => {
+                        if (a.estado === 'docente_falta') totalFaltasDocente++;
+                    });
+                }
             });
 
             const tpsDoneEl = document.getElementById('stat-tps-done');
@@ -474,7 +482,7 @@
             const listContainer = document.getElementById('dashboard-materias-list');
             listContainer.innerHTML = MATERIAS_CONFIG.map(m => {
                 const data = appData[m.id] || { tps: [], parcial1: '', parcial2: '' };
-                const dDone = data.tps.filter(t => t.hecho).length;
+                const dDone = (data.tps || []).filter(t => t.hecho).length;
                 const p1 = data.parcial1 || '-';
                 const p2 = data.parcial2 || '-';
                 return `
@@ -509,7 +517,7 @@
                 const data = appData[m.id] || { tps: Array(10).fill().map(() => ({hecho:false, fecha:'', devolucion:''})), parcial1:'', parcial2:'', recup1:'' };
                 let tpsHtml = '';
                 for (let i = 0; i < 10; i++) {
-                    const tp = data.tps[i] || { hecho: false, fecha: '', devolucion: '' };
+                    const tp = (data.tps && data.tps[i]) ? data.tps[i] : { hecho: false, fecha: '', devolucion: '' };
                     tpsHtml += `
                         <td class="p-2 text-center border-l border-slate-100 dark:border-slate-700/40 min-w-[95px]">
                             <div class="flex flex-col items-center gap-1.5">
@@ -545,12 +553,14 @@
         }
 
         window.toggleTP = function(mId, index) {
+            if (!appData[mId].tps) appData[mId].tps = Array(10).fill().map(() => ({ hecho: false, fecha: '', devolucion: '' }));
             appData[mId].tps[index].hecho = !appData[mId].tps[index].hecho;
             saveCloudData(true);
             renderTPsTable();
         }
 
         window.updateTPField = function(mId, index, field, val) {
+            if (!appData[mId].tps) appData[mId].tps = Array(10).fill().map(() => ({ hecho: false, fecha: '', devolucion: '' }));
             appData[mId].tps[index][field] = val;
             saveCloudData(true);
         }
@@ -596,7 +606,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
-                            ${data.asistencias.map((a, idx) => {
+                            ${(data.asistencias || []).map((a, idx) => {
                                 let badgeBg = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
                                 if (a.estado === 'alumno_falta') badgeBg = 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
                                 if (a.estado === 'docente_falta') badgeBg = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
@@ -663,6 +673,7 @@
         }
 
         window.updateAsistenciaField = function(mId, idx, field, val) {
+            if (!appData[mId].asistencias) appData[mId].asistencias = [];
             appData[mId].asistencias[idx][field] = val;
             saveCloudData(true);
             if (field === 'feriado' || field === 'estado') {
