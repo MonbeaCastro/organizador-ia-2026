@@ -43,7 +43,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight">2026 UPATECO Organizador de Cursada</h1>
-                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-cloud text-[10px]"></i> <span id="sync-label">Conectando...</span></span></p>
+                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer hover:bg-brand-800" onclick="openSyncModal()" title="Configurar cuenta/email"><i class="fa-solid fa-cloud text-[10px]"></i> <span id="sync-label">Cuenta: Configurar</span></span></p>
                 </div>
             </div>
             
@@ -61,8 +61,8 @@
                 <button onclick="switchTab('horarios')" id="btn-tab-horarios" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
                     <i class="fa-solid fa-calendar-days mr-2"></i> Horarios & Zoom
                 </button>
-                <button onclick="handleGoogleLogin()" title="Iniciar sesión con Google" class="px-3 py-2 bg-white hover:bg-slate-100 text-slate-800 font-medium rounded-lg transition text-xs flex items-center gap-2 shadow-sm" id="btn-google-auth">
-                    <i class="fa-brands fa-google text-red-500"></i> <span id="google-btn-text">Iniciar sesión Google</span>
+                <button onclick="openSyncModal()" title="Configurar Email o Cuenta de Sincronización" class="px-3 py-2 bg-brand-700 hover:bg-brand-600 text-white rounded-lg transition text-xs flex items-center gap-2 shadow-sm" id="btn-sync-modal">
+                    <i class="fa-solid fa-user-gear"></i> <span id="account-btn-label">Vincular Email</span>
                 </button>
                 <button onclick="resetData()" title="Restablecer datos" class="p-2 bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition">
                     <i class="fa-solid fa-rotate-right"></i>
@@ -70,6 +70,31 @@
             </div>
         </div>
     </header>
+
+    <!-- MODAL DE CONFIGURACIÓN DE CUENTA / EMAIL -->
+    <div id="sync-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 max-w-md w-full rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                    <i class="fa-solid fa-envelope-circle-check text-brand-500"></i> Vincular Correo o Cuenta
+                </h3>
+                <button onclick="closeSyncModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Ingresa tu <strong>correo electrónico</strong> (o un identificador único que uses) tanto en tu PC como en tu celular. De esta manera, ambos dispositivos se conectarán al mismo espacio en la nube en tiempo real.
+            </p>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Tu Email o Identificador:</label>
+                <input type="email" id="sync-email-input" placeholder="tucorreo@gmail.com" class="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-brand-500 outline-none">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeSyncModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-300 transition">Cancelar</button>
+                <button onclick="saveUserEmail()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold transition shadow-sm">Guardar y Sincronizar</button>
+            </div>
+        </div>
+    </div>
 
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8">
 
@@ -253,7 +278,7 @@
     <!-- FIREBASE AND APPLICATION SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const MATERIAS_CONFIG = [
@@ -298,6 +323,7 @@
         let db = null;
         let auth = null;
         let userId = null;
+        let currentUserEmail = localStorage.getItem('ia_cursada_2026_email') || '';
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ia-cursada-2026';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -323,7 +349,7 @@
         }
 
         async function initFirebase() {
-            // Carga inmediata local
+            // Carga local inmediata
             const localStored = localStorage.getItem('ia_cursada_2026_data');
             if (localStored) {
                 try {
@@ -335,50 +361,35 @@
                 appData = getDefaultInitialData();
             }
             window.renderAll();
+            updateAccountUI();
 
-            if (!firebaseConfig) {
-                document.getElementById('sync-label').innerText = 'Modo Local';
-                return;
+            if (!currentUserEmail) {
+                setTimeout(() => {
+                    if (!localStorage.getItem('ia_cursada_2026_email')) {
+                        openSyncModal();
+                    }
+                }, 800);
             }
+
+            if (!firebaseConfig) return;
 
             try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        const email = user.email || user.displayName || 'Google User';
-                        document.getElementById('google-btn-text').innerText = email.split('@')[0];
-                        document.getElementById('sync-label').innerText = `Sincronizado (${email})`;
-                        await loadCloudData();
-                    } else {
-                        // Inicio anónimo por defecto si no ha hecho login con Google
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    }
-                });
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                if (currentUserEmail) {
+                    userId = btoa(currentUserEmail.toLowerCase().trim()).replace(/=/g, '');
+                    await loadCloudData();
+                }
             } catch (e) {
                 console.error("Firebase init error:", e);
-                document.getElementById('sync-label').innerText = 'Modo Local (Offline)';
-            }
-        }
-
-        window.handleGoogleLogin = async function() {
-            if (!auth) return;
-            const provider = new GoogleAuthProvider();
-            try {
-                const result = await signInWithPopup(auth, provider);
-                userId = result.user.uid;
-                window.showToast(`Conectado como ${result.user.email}`);
-                await loadCloudData();
-            } catch (e) {
-                console.error("Google login error:", e);
-                window.showToast('Error al iniciar sesión con Google', 'fa-triangle-exclamation');
             }
         }
 
@@ -393,6 +404,7 @@
                 } else {
                     await saveCloudData(false);
                 }
+                updateAccountUI();
                 window.renderAll();
             } catch (e) {
                 console.error("Error loading cloud data:", e);
@@ -407,13 +419,49 @@
                 try {
                     const docRef = doc(db, 'artifacts', appId, 'users', userId, 'cursada', 'data');
                     await setDoc(docRef, appData);
-                    if (notify) window.showToast('Sincronizado en la nube');
+                    if (notify) window.showToast('Sincronizado con la nube');
                 } catch (e) {
                     console.error("Error saving to cloud:", e);
                     if (notify) window.showToast('Guardado localmente');
                 }
             } else {
                 if (notify) window.showToast('Cambios guardados localmente');
+            }
+        }
+
+        window.openSyncModal = function() {
+            document.getElementById('sync-email-input').value = currentUserEmail;
+            document.getElementById('sync-modal').classList.remove('hidden');
+        }
+
+        window.closeSyncModal = function() {
+            document.getElementById('sync-modal').classList.add('hidden');
+        }
+
+        window.saveUserEmail = async function() {
+            const val = document.getElementById('sync-email-input').value.trim();
+            if (!val || !val.includes('@')) {
+                alert('Por favor ingresa un correo electrónico válido.');
+                return;
+            }
+            currentUserEmail = val;
+            localStorage.setItem('ia_cursada_2026_email', currentUserEmail);
+            userId = btoa(currentUserEmail.toLowerCase().trim()).replace(/=/g, '');
+            closeSyncModal();
+            updateAccountUI();
+            window.showToast('Correo configurado, sincronizando...');
+            await loadCloudData();
+        }
+
+        function updateAccountUI() {
+            const lbl = document.getElementById('sync-label');
+            const btnLabel = document.getElementById('account-btn-label');
+            if (currentUserEmail) {
+                if (lbl) lbl.innerText = `Cuenta: ${currentUserEmail}`;
+                if (btnLabel) btnLabel.innerText = currentUserEmail.split('@')[0];
+            } else {
+                if (lbl) lbl.innerText = 'Cuenta: No vinculada';
+                if (btnLabel) btnLabel.innerText = 'Vincular Email';
             }
         }
 
@@ -766,3 +814,4 @@
     </script>
 </body>
 </html>
+
