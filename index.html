@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 UPATECO Organizador de Cursada - Tecnicatura Universitaria en IA y Machine Learning</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans min-h-full flex flex-col transition-colors duration-200">
+
+    <header class="bg-slate-900 text-white shadow-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 p-3 rounded-xl shadow-lg flex items-center justify-center text-white text-2xl font-bold">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight">2026 UPATECO Organizador de Cursada</h1>
+                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-cloud text-[10px]"></i> Sincronizando en la nube</span></p>
+                </div>
+            </div>
+            
+            <!-- Quick navigation & Actions -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="px-4 py-2 rounded-lg text-sm font-medium bg-brand-600 text-white transition shadow-sm">
+                    <i class="fa-solid fa-chart-pie mr-2"></i> Dashboard
+                </button>
+                <button onclick="switchTab('tps')" id="btn-tab-tps" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-tasks mr-2"></i> TPs & Notas
+                </button>
+                <button onclick="switchTab('asistencia')" id="btn-tab-asistencia" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-user-check mr-2"></i> Asistencias
+                </button>
+                <button onclick="switchTab('horarios')" id="btn-tab-horarios" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-calendar-days mr-2"></i> Horarios & Zoom
+                </button>
+                <button onclick="resetData()" title="Restablecer datos" class="p-2 bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8">
+
+        <!-- NOTIFICATION TOAST -->
+        <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-xl border border-slate-700 flex items-center gap-3">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-brand-400 text-lg"></i>
+            <span id="toast-message" class="text-sm font-medium">Cambios guardados correctamente</span>
+        </div>
+
+        <!-- ================= TAB: DASHBOARD ================= -->
+        <div id="tab-dashboard" class="space-y-6">
+            <!-- Stats overview -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Materias Activas</p>
+                        <h3 class="text-2xl font-bold mt-1">5</h3>
+                        <span class="text-xs text-brand-600 dark:text-brand-400 font-medium">2do Cuatrimestre</span>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-book"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">TPs Completados</p>
+                        <h3 id="stat-tps-done" class="text-2xl font-bold mt-1">0 / 50</h3>
+                        <span id="stat-tps-pct" class="text-xs text-slate-500 font-medium">0% avance</span>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 text-brand-600 dark:text-brand-400 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Promedio General</p>
+                        <h3 id="stat-promedio" class="text-2xl font-bold mt-1">-</h3>
+                        <span class="text-xs text-amber-500 font-medium">Parciales cargados</span>
+                    </div>
+                    <div class="w-12 h-12 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Faltas Docentes</p>
+                        <h3 id="stat-docente-faltas" class="text-2xl font-bold mt-1">0</h3>
+                        <span class="text-xs text-red-500 font-medium">Clases sin profesor</span>
+                    </div>
+                    <div class="w-12 h-12 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-user-slash"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick schedule preview & summary -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Materias list card -->
+                <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-brand-500"></i> Resumen de Materias y Estado
+                    </h3>
+                    <div class="space-y-4" id="dashboard-materias-list">
+                        <!-- Generado dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Next Classes / Quick tips -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-star text-indigo-500"></i> Horarios de Cursada
+                        </h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Recordatorio de días y franjas horarias semanales:</p>
+                        <div class="space-y-3 text-sm" id="dashboard-schedule-preview">
+                            <!-- Items -->
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
+                        <button onclick="switchTab('tps')" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium text-sm transition shadow-sm flex items-center justify-center gap-2">
+                            <span>Ir al Seguimiento de TPs</span> <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB: TPs Y NOTAS ================= -->
+        <div id="tab-tps" class="space-y-6 hidden">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-tasks text-brand-500"></i> Seguimiento de Trabajos Prácticos y Exámenes
+                        </h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Marca los TPs entregados, añade fechas, la devolución/nota del docente y carga tus calificaciones parciales.</p>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg">
+                        <i class="fa-solid fa-lightbulb text-amber-500"></i> Haz clic en el botón de TP para marcarlo.
+                    </div>
+                </div>
+
+                <!-- TPs Table Container -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse" id="table-tps">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-900/50">
+                                <th class="p-3 w-64">Materia</th>
+                                <th class="p-3 text-center" colspan="10">Trabajos Prácticos (1 al 10) [Estado, Fecha y Nota/Devolución]</th>
+                                <th class="p-3 text-center w-20">Parcial 1</th>
+                                <th class="p-3 text-center w-20">Parcial 2</th>
+                                <th class="p-3 text-center w-20">Recup. 1</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
+                            <!-- Renderizado vía JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB: ASISTENCIAS ================= -->
+        <div id="tab-asistencia" class="space-y-6 hidden">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-user-check text-indigo-500"></i> Control de Asistencias y Novedades Docentes
+                        </h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Controla tu asistencia, las faltas o cancelaciones de los docentes y marca días feriados.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Presente
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                            <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Falta Alumno
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Falta Docente
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selector de Materia para Asistencia -->
+                <div class="mb-6 flex flex-wrap gap-2" id="asistencia-materia-tabs">
+                    <!-- Botones de materias generados por JS -->
+                </div>
+
+                <!-- Panel de Asistencia de la materia seleccionada -->
+                <div id="asistencia-panel-content" class="space-y-4">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB: HORARIOS ================= -->
+        <div id="tab-horarios" class="space-y-6 hidden">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <h2 class="text-xl font-bold mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-days text-brand-500"></i> Grilla de Horarios de Cursada 2026 y Enlaces de Clases
+                </h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Detalle de días, horarios y enlaces de Zoom o Google Meet para ingresar directamente a las clases sincrónicas.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="horarios-grid">
+                    <!-- Generado dinámicamente -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="mt-auto py-6 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800">
+        <p>2026 UPATECO Organizador de Cursada • Tecnicatura Universitaria en IA y Machine Learning</p>
+    </footer>
+
+    <!-- FIREBASE AND APPLICATION SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const MATERIAS_CONFIG = [
+            {
+                id: 'bd',
+                nombre: 'Base de Datos SQL y NoSQL',
+                horario: 'Viernes 17:30 a 20:00 hs',
+                dias: ['Viernes'],
+                color: 'indigo'
+            },
+            {
+                id: 'estadt',
+                nombre: 'Estadística Aplicada y Probabilidad',
+                horario: 'Miércoles 8:00 a 10:00 hs (Lunes deja clase teórica grabada)',
+                dias: ['Miércoles'],
+                color: 'emerald'
+            },
+            {
+                id: 'etica',
+                nombre: 'Ética y Regulación en IA',
+                horario: 'Miércoles 10:00 a 12:00 hs',
+                dias: ['Miércoles'],
+                color: 'purple'
+            },
+            {
+                id: 'ingles',
+                nombre: 'Inglés Técnico I',
+                horario: 'Jueves 9:00 a 11:00 hs',
+                dias: ['Jueves'],
+                color: 'amber'
+            },
+            {
+                id: 'prog2',
+                nombre: 'Programación II (Estructuras de Datos y APIs)',
+                horario: 'Lunes 18:00 a 19:30 y Miércoles 18:00 a 19:30',
+                dias: ['Lunes', 'Miércoles'],
+                color: 'blue'
+            }
+        ];
+
+        let appData = {};
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let isCloudSynced = false;
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ia-cursada-2026';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        function getDefaultInitialData() {
+            let initial = {};
+            MATERIAS_CONFIG.forEach(m => {
+                initial[m.id] = {
+                    tps: Array(10).fill().map(() => ({ hecho: false, fecha: '', devolucion: '' })),
+                    parcial1: '',
+                    parcial2: '',
+                    recup1: '',
+                    zoomLink: '',
+                    asistencias: [
+                        { clase: 1, fecha: '2026-08-10', estado: 'presente', feriado: false, observacion: '' },
+                        { clase: 2, fecha: '2026-08-12', estado: 'presente', feriado: false, observacion: '' },
+                        { clase: 3, fecha: '2026-08-17', estado: 'presente', feriado: false, observacion: '' },
+                        { clase: 4, fecha: '2026-08-19', estado: 'presente', feriado: false, observacion: '' }
+                    ]
+                };
+            });
+            return initial;
+        }
+
+        async function initFirebase() {
+            if (!firebaseConfig) {
+                console.warn("Firebase config not available. Falling back to local state.");
+                appData = JSON.parse(localStorage.getItem('ia_cursada_2026_data')) || getDefaultInitialData();
+                document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-hard-drive text-[10px]"></i> Modo Local';
+                window.renderAll();
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser?.uid || crypto.randomUUID();
+                await loadCloudData();
+            } catch (e) {
+                console.error("Firebase init error:", e);
+                appData = JSON.parse(localStorage.getItem('ia_cursada_2026_data')) || getDefaultInitialData();
+                document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Error de Sincronización';
+                window.renderAll();
+            }
+        }
+
+        async function loadCloudData() {
+            if (!db || !userId) return;
+            try {
+                // RULE 1: Private user path in Firestore
+                const docRef = doc(db, 'artifacts', appId, 'users', userId, 'cursada', 'data');
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    appData = snap.data();
+                } else {
+                    appData = getDefaultInitialData();
+                    await saveCloudData(false);
+                }
+                isCloudSynced = true;
+                document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-cloud text-[10px]"></i> Sincronizado en la nube';
+                window.renderAll();
+            } catch (e) {
+                console.error("Error loading cloud data:", e);
+                appData = JSON.parse(localStorage.getItem('ia_cursada_2026_data')) || getDefaultInitialData();
+                window.renderAll();
+            }
+        }
+
+        async function saveCloudData(notify = true) {
+            // Local backup
+            localStorage.setItem('ia_cursada_2026_data', JSON.stringify(appData));
+            window.updateDashboardStats();
+
+            if (db && userId) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'users', userId, 'cursada', 'data');
+                    await setDoc(docRef, appData);
+                    if (notify) window.showToast('Cambios guardados en la nube');
+                } catch (e) {
+                    console.error("Error saving to cloud:", e);
+                    if (notify) window.showToast('Guardado local (Sin conexión)');
+                }
+            } else {
+                if (notify) window.showToast('Cambios guardados');
+            }
+        }
+
+        window.getAppData = () => appData;
+        window.saveData = saveCloudData;
+        window.MATERIAS_CONFIG = MATERIAS_CONFIG;
+
+        window.resetData = function() {
+            if (confirm('¿Estás seguro de restablecer todos los datos del organizador?')) {
+                appData = getDefaultInitialData();
+                saveCloudData(false);
+                window.renderAll();
+                window.showToast('Organizador restablecido', 'fa-rotate-right');
+            }
+        };
+
+        let currentActiveTab = 'dashboard';
+        let currentAsistenciaMateria = MATERIAS_CONFIG[0].id;
+
+        window.switchTab = function(tabId) {
+            currentActiveTab = tabId;
+            ['dashboard', 'tps', 'asistencia', 'horarios'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`btn-tab-${t}`);
+                if (t === tabId) {
+                    el.classList.remove('hidden');
+                    btn.className = "px-4 py-2 rounded-lg text-sm font-medium bg-brand-600 text-white transition shadow-sm";
+                } else {
+                    el.classList.add('hidden');
+                    btn.className = "px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+                }
+            });
+            renderActiveTabContent();
+        }
+
+        function renderActiveTabContent() {
+            if (currentActiveTab === 'dashboard') renderDashboard();
+            else if (currentActiveTab === 'tps') renderTPsTable();
+            else if (currentActiveTab === 'asistencia') renderAsistenciaView();
+            else if (currentActiveTab === 'horarios') renderHorariosView();
+        }
+
+        window.updateDashboardStats = function() {
+            let totalTps = 0;
+            let doneTps = 0;
+            let totalNotas = [];
+            let totalFaltasDocente = 0;
+
+            MATERIAS_CONFIG.forEach(m => {
+                const data = appData[m.id];
+                if (!data) return;
+                data.tps.forEach(tp => {
+                    totalTps++;
+                    if (tp.hecho) doneTps++;
+                });
+                if (data.parcial1 !== '' && !isNaN(parseFloat(data.parcial1))) totalNotas.push(parseFloat(data.parcial1));
+                if (data.parcial2 !== '' && !isNaN(parseFloat(data.parcial2))) totalNotas.push(parseFloat(data.parcial2));
+                if (data.recup1 !== '' && !isNaN(parseFloat(data.recup1))) totalNotas.push(parseFloat(data.recup1));
+
+                data.asistencias.forEach(a => {
+                    if (a.estado === 'docente_falta') totalFaltasDocente++;
+                });
+            });
+
+            const tpsDoneEl = document.getElementById('stat-tps-done');
+            if (tpsDoneEl) tpsDoneEl.innerText = `${doneTps} / ${totalTps}`;
+            const pctEl = document.getElementById('stat-tps-pct');
+            if (pctEl) {
+                const pct = Math.round((doneTps / totalTps) * 100) || 0;
+                pctEl.innerText = `${pct}% completados`;
+            }
+
+            const promEl = document.getElementById('stat-promedio');
+            if (promEl) {
+                const prom = totalNotas.length > 0 ? (totalNotas.reduce((a, b) => a + b, 0) / totalNotas.length).toFixed(1) : '-';
+                promEl.innerText = prom;
+            }
+            const faltasDocEl = document.getElementById('stat-docente-faltas');
+            if (faltasDocEl) faltasDocEl.innerText = totalFaltasDocente;
+        }
+
+        function renderDashboard() {
+            window.updateDashboardStats();
+            const listContainer = document.getElementById('dashboard-materias-list');
+            listContainer.innerHTML = MATERIAS_CONFIG.map(m => {
+                const data = appData[m.id] || { tps: [], parcial1: '', parcial2: '' };
+                const dDone = data.tps.filter(t => t.hecho).length;
+                const p1 = data.parcial1 || '-';
+                const p2 = data.parcial2 || '-';
+                return `
+                    <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h4 class="font-semibold text-slate-800 dark:text-slate-200">${m.nombre}</h4>
+                            <p class="text-xs text-slate-500 mt-0.5"><i class="fa-regular fa-clock mr-1"></i> ${m.horario}</p>
+                        </div>
+                        <div class="flex items-center gap-4 text-xs">
+                            <span class="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full font-medium">TPs: ${dDone}/10</span>
+                            <span class="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full font-medium">P1: ${p1} | P2: ${p2}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const schedulePreview = document.getElementById('dashboard-schedule-preview');
+            schedulePreview.innerHTML = MATERIAS_CONFIG.map(m => `
+                <div class="flex items-start gap-2.5">
+                    <span class="w-2 h-2 mt-1.5 rounded-full bg-brand-500 flex-shrink-0"></span>
+                    <div>
+                        <p class="font-medium text-slate-700 dark:text-slate-300 text-xs">${m.nombre}</p>
+                        <p class="text-[11px] text-slate-500">${m.horario}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTPsTable() {
+            const tbody = document.querySelector('#table-tps tbody');
+            tbody.innerHTML = MATERIAS_CONFIG.map((m, mIdx) => {
+                const data = appData[m.id] || { tps: Array(10).fill().map(() => ({hecho:false, fecha:'', devolucion:''})), parcial1:'', parcial2:'', recup1:'' };
+                let tpsHtml = '';
+                for (let i = 0; i < 10; i++) {
+                    const tp = data.tps[i] || { hecho: false, fecha: '', devolucion: '' };
+                    tpsHtml += `
+                        <td class="p-2 text-center border-l border-slate-100 dark:border-slate-700/40 min-w-[95px]">
+                            <div class="flex flex-col items-center gap-1.5">
+                                <button onclick="window.toggleTP('${m.id}', ${i})" class="w-7 h-7 rounded-lg flex items-center justify-center transition ${tp.hecho ? 'bg-brand-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200'}" title="Marcar entregado">
+                                    <i class="fa-solid ${tp.hecho ? 'fa-check' : 'fa-minus'} text-xs"></i>
+                                </button>
+                                <input type="text" value="${tp.fecha || ''}" placeholder="dd/mm" onchange="window.updateTPField('${m.id}', ${i}, 'fecha', this.value)" class="w-16 text-[10px] text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-0.5 text-slate-600 dark:text-slate-300" title="Fecha de entrega">
+                                <input type="text" value="${tp.devolucion || ''}" placeholder="Nota/Dev." onchange="window.updateTPField('${m.id}', ${i}, 'devolucion', this.value)" class="w-16 text-[10px] text-center bg-brand-50/50 dark:bg-slate-900 border border-brand-200 dark:border-slate-700 rounded p-0.5 text-brand-700 dark:text-brand-300" title="Nota o devolución del docente para este TP">
+                            </div>
+                        </td>
+                    `;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition">
+                        <td class="p-3 font-medium text-slate-800 dark:text-slate-200">
+                            <span class="text-xs text-slate-400 block mb-0.5">${mIdx + 1}.</span>
+                            ${m.nombre}
+                        </td>
+                        ${tpsHtml}
+                        <td class="p-2 text-center border-l border-slate-200 dark:border-slate-700">
+                            <input type="text" value="${data.parcial1 || ''}" onchange="window.updateNota('${m.id}', 'parcial1', this.value)" placeholder="-" class="w-12 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1 font-semibold text-sm">
+                        </td>
+                        <td class="p-2 text-center">
+                            <input type="text" value="${data.parcial2 || ''}" onchange="window.updateNota('${m.id}', 'parcial2', this.value)" placeholder="-" class="w-12 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1 font-semibold text-sm">
+                        </td>
+                        <td class="p-2 text-center">
+                            <input type="text" value="${data.recup1 || ''}" onchange="window.updateNota('${m.id}', 'recup1', this.value)" placeholder="-" class="w-12 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1 font-semibold text-sm">
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.toggleTP = function(mId, index) {
+            appData[mId].tps[index].hecho = !appData[mId].tps[index].hecho;
+            saveCloudData(true);
+            renderTPsTable();
+        }
+
+        window.updateTPField = function(mId, index, field, val) {
+            appData[mId].tps[index][field] = val;
+            saveCloudData(true);
+        }
+
+        window.updateNota = function(mId, field, val) {
+            appData[mId][field] = val;
+            saveCloudData(true);
+        }
+
+        function renderAsistenciaView() {
+            const tabsContainer = document.getElementById('asistencia-materia-tabs');
+            tabsContainer.innerHTML = MATERIAS_CONFIG.map(m => `
+                <button onclick="window.selectAsistenciaMateria('${m.id}')" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition ${currentAsistenciaMateria === m.id ? 'bg-brand-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                    ${m.nombre}
+                </button>
+            `).join('');
+
+            const materia = MATERIAS_CONFIG.find(m => m.id === currentAsistenciaMateria);
+            const data = appData[currentAsistenciaMateria] || { asistencias: [] };
+
+            const panel = document.getElementById('asistencia-panel-content');
+            panel.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/60 gap-4 mb-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200">${materia.nombre}</h3>
+                        <p class="text-xs text-slate-500">${materia.horario}</p>
+                    </div>
+                    <button onclick="window.addClaseAsistencia('${currentAsistenciaMateria}')" class="px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-lg transition shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> Agregar Clase / Fecha
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-900/50">
+                                <th class="p-3 w-20 text-center">Clase</th>
+                                <th class="p-3 w-36">Fecha</th>
+                                <th class="p-3 text-center w-36">Feriado</th>
+                                <th class="p-3 text-center">Estado de Asistencia & Docente</th>
+                                <th class="p-3">Observaciones / Motivo</th>
+                                <th class="p-3 w-16 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
+                            ${data.asistencias.map((a, idx) => {
+                                let badgeBg = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+                                if (a.estado === 'alumno_falta') badgeBg = 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
+                                if (a.estado === 'docente_falta') badgeBg = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+
+                                return `
+                                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition ${a.feriado ? 'opacity-60 bg-slate-100/50 dark:bg-slate-800/50' : ''}">
+                                        <td class="p-3 text-center font-semibold text-xs text-slate-500">#${idx + 1}</td>
+                                        <td class="p-3">
+                                            <input type="date" value="${a.fecha || ''}" onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'fecha', this.value)" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5 text-slate-700 dark:text-slate-300 w-full">
+                                        </td>
+                                        <td class="p-3 text-center">
+                                            <label class="inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" ${a.feriado ? 'checked' : ''} onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'feriado', this.checked)" class="sr-only peer">
+                                                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600 relative"></div>
+                                                <span class="ml-2 text-xs font-medium text-slate-500">${a.feriado ? 'Sí' : 'No'}</span>
+                                            </label>
+                                        </td>
+                                        <td class="p-3 text-center">
+                                            <select onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'estado', this.value)" class="text-xs font-medium rounded-lg p-1.5 border border-slate-200 dark:border-slate-700 ${badgeBg} outline-none cursor-pointer">
+                                                <option value="presente" ${a.estado === 'presente' ? 'selected' : ''}>Presente</option>
+                                                <option value="alumno_falta" ${a.estado === 'alumno_falta' ? 'selected' : ''}>Falta Alumno</option>
+                                                <option value="docente_falta" ${a.estado === 'docente_falta' ? 'selected' : ''}>Falta Docente (Sin clase/grabación)</option>
+                                            </select>
+                                        </td>
+                                        <td class="p-3">
+                                            <input type="text" value="${a.observacion || ''}" placeholder="Ej. Docente no subió material ni clase..." onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'observacion', this.value)" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5 text-slate-600 dark:text-slate-300 w-full">
+                                        </td>
+                                        <td class="p-3 text-center">
+                                            <button onclick="window.removeClaseAsistencia('${currentAsistenciaMateria}', ${idx})" class="p-1.5 text-slate-400 hover:text-red-500 rounded transition" title="Eliminar clase">
+                                                <i class="fa-solid fa-trash-can text-xs"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        window.selectAsistenciaMateria = function(mId) {
+            currentAsistenciaMateria = mId;
+            renderAsistenciaView();
+        }
+
+        window.addClaseAsistencia = function(mId) {
+            if (!appData[mId].asistencias) appData[mId].asistencias = [];
+            appData[mId].asistencias.push({
+                clase: appData[mId].asistencias.length + 1,
+                fecha: new Date().toISOString().split('T')[0],
+                estado: 'presente',
+                feriado: false,
+                observacion: ''
+            });
+            saveCloudData(true);
+            renderAsistenciaView();
+        }
+
+        window.removeClaseAsistencia = function(mId, idx) {
+            appData[mId].asistencias.splice(idx, 1);
+            saveCloudData(true);
+            renderAsistenciaView();
+        }
+
+        window.updateAsistenciaField = function(mId, idx, field, val) {
+            appData[mId].asistencias[idx][field] = val;
+            saveCloudData(true);
+            if (field === 'feriado' || field === 'estado') {
+                renderAsistenciaView();
+            }
+        }
+
+        window.updateZoomLink = function(mId, val) {
+            if (!appData[mId]) appData[mId] = {};
+            appData[mId].zoomLink = val;
+            saveCloudData(true);
+        }
+
+        function renderHorariosView() {
+            const container = document.getElementById('horarios-grid');
+            container.innerHTML = MATERIAS_CONFIG.map(m => {
+                const data = appData[m.id] || { zoomLink: '' };
+                const link = data.zoomLink || '';
+                return `
+                    <div class="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-3 h-3 rounded-full bg-brand-500"></span>
+                                <h3 class="font-bold text-slate-800 dark:text-slate-200 text-base">${m.nombre}</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mb-3 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                                <i class="fa-regular fa-clock text-brand-500 mr-1.5"></i> ${m.horario}
+                            </p>
+                            <div class="mb-4">
+                                <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Enlace de Clase (Zoom / Google Meet)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" value="${link}" placeholder="https://zoom.us/..." onchange="window.updateZoomLink('${m.id}', this.value)" class="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-700 dark:text-slate-300 w-full">
+                                    ${link ? `<a href="${link.startsWith('http') ? link : 'https://' + link}" target="_blank" class="px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg flex items-center justify-center text-xs transition" title="Abrir enlace en nueva pestaña"><i class="fa-solid fa-video"></i></a>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-700">
+                            <span>Modalidad Sincrónica / Virtual</span>
+                            <span class="font-medium text-brand-600 dark:text-brand-400">Cursada 2026</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.showToast = function(message, icon = 'fa-circle-check') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = message;
+            iconEl.className = `fa-solid ${icon} text-brand-400 text-lg`;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        window.renderAll = function() {
+            renderActiveTabContent();
+        }
+
+        // Inicializar al cargar la ventana
+        window.onload = function() {
+            initFirebase();
+        };
+    </script>
+</body>
+</html>
