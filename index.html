@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="es" class="h-full">
 <head>
     <meta charset="UTF-8">
@@ -43,7 +43,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight">2026 UPATECO Organizador de Cursada</h1>
-                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer hover:bg-brand-800" onclick="openSyncModal()" title="Configurar PIN de Sincronización"><i class="fa-solid fa-cloud text-[10px]"></i> <span id="sync-label">Sincronizando</span></span></p>
+                    <p class="text-sm text-slate-400">Tecnicatura Universitaria en IA y Machine Learning • <span class="text-brand-400 font-semibold">1er año - 2do Cuatrimestre</span> <span id="sync-status" class="ml-2 text-xs bg-brand-900/60 text-brand-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer hover:bg-brand-800" onclick="openSyncModal()" title="Configurar PIN de Sincronización"><i class="fa-solid fa-cloud text-[10px]"></i> <span id="sync-label">PIN: Configurar</span></span></p>
                 </div>
             </div>
             
@@ -83,11 +83,11 @@
                 </button>
             </div>
             <p class="text-xs text-slate-500 dark:text-slate-400">
-                Para que tu computadora y tu celular compartan exactamente los mismos datos en tiempo real, ingresa un <strong>Código PIN secreto</strong> (ej: <code>ia2026pc</code> o tu número preferido). Úsalo en ambos dispositivos.
+                Para que tu computadora y tu celular compartan exactamente los mismos datos en tiempo real, ingresa un <strong>Código PIN secreto</strong> idéntico en ambos dispositivos (ej: <code>ia2026pc</code>).
             </p>
             <div>
                 <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Tu PIN de Sincronización:</label>
-                <input type="text" id="sync-pin-input" placeholder="Ej. mi-cursada-ia" class="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-brand-500 outline-none font-mono">
+                <input type="text" id="sync-pin-input" placeholder="Ej. ia2026pc" class="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-brand-500 outline-none font-mono">
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button onclick="closeSyncModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-300 transition">Cancelar</button>
@@ -323,7 +323,7 @@
         let db = null;
         let auth = null;
         let userId = null;
-        let currentSyncPin = localStorage.getItem('ia_cursada_2026_pin') || 'default_user_2026';
+        let currentSyncPin = localStorage.getItem('ia_cursada_2026_pin') || '';
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ia-cursada-2026';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -349,7 +349,7 @@
         }
 
         async function initFirebase() {
-            // Cargar inmediato desde LocalStorage para que responda al instante
+            // Cargar inmediato desde LocalStorage para respuesta instantánea
             const localStored = localStorage.getItem('ia_cursada_2026_data');
             if (localStored) {
                 try {
@@ -363,10 +363,16 @@
             window.renderAll();
             updateSyncLabel();
 
-            if (!firebaseConfig) {
-                document.getElementById('sync-label').innerText = 'Modo Local';
-                return;
+            if (!currentSyncPin) {
+                // Si no hay PIN configurado aún, sugerir configurarlo
+                setTimeout(() => {
+                    if (!localStorage.getItem('ia_cursada_2026_pin')) {
+                        openSyncModal();
+                    }
+                }, 1000);
             }
+
+            if (!firebaseConfig) return;
 
             try {
                 const app = initializeApp(firebaseConfig);
@@ -379,11 +385,12 @@
                     await signInAnonymously(auth);
                 }
 
-                userId = currentSyncPin; // Usamos el PIN personalizado como ID en Firestore
-                await loadCloudData();
+                if (currentSyncPin) {
+                    userId = currentSyncPin;
+                    await loadCloudData();
+                }
             } catch (e) {
                 console.error("Firebase init error:", e);
-                document.getElementById('sync-label').innerText = 'Modo Local (Offline)';
             }
         }
 
@@ -398,7 +405,7 @@
                 } else {
                     await saveCloudData(false);
                 }
-                document.getElementById('sync-label').innerText = `Sincronizado (PIN: ${currentSyncPin})`;
+                updateSyncLabel();
                 window.renderAll();
             } catch (e) {
                 console.error("Error loading cloud data:", e);
@@ -443,13 +450,15 @@
             userId = currentSyncPin;
             closeSyncModal();
             updateSyncLabel();
-            window.showToast('PIN actualizado, sincronizando...');
+            window.showToast('PIN guardado, sincronizando...');
             await loadCloudData();
         }
 
         function updateSyncLabel() {
             const lbl = document.getElementById('sync-label');
-            if (lbl) lbl.innerText = `PIN: ${currentSyncPin}`;
+            if (lbl) {
+                lbl.innerText = currentSyncPin ? `PIN: ${currentSyncPin}` : 'PIN: Configurar';
+            }
         }
 
         window.getAppData = () => appData;
