@@ -73,8 +73,8 @@
                 <button onclick="openSyncModal()" title="Cuenta y sincronización" class="px-3 py-2 bg-brand-700 hover:bg-brand-600 text-white rounded-lg transition text-xs flex items-center gap-2 shadow-sm" id="btn-sync-modal">
                     <i class="fa-brands fa-google"></i> <span id="account-btn-label">Ingresar con Google</span>
                 </button>
-                <button onclick="resetData()" title="Restablecer datos" class="p-2 bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition">
-                    <i class="fa-solid fa-rotate-right"></i>
+                <button onclick="syncFromCloud()" title="Actualizar desde la nube"
+                  <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
             </div>
         </div>
@@ -715,13 +715,53 @@
         window.saveData = saveCloudData;
         window.MATERIAS_CONFIG = MATERIAS_CONFIG;
 
-        window.resetData = function() {
-            if (confirm('¿Estás seguro de restablecer todos los datos del organizador?')) {
-                appData = getDefaultInitialData();
-                saveCloudData(false);
-                window.renderAll();
-                window.showToast('Organizador restablecido', 'fa-rotate-right');
-            }
+window.syncFromCloud = async function() {
+    if (!db || !userId || !currentUser) {
+        window.showToast(
+            'Iniciá sesión para sincronizar',
+            'fa-triangle-exclamation'
+        );
+        return;
+    }
+
+    try {
+        const docRef = getCloudDocRef(userId);
+        const snap = await getDoc(docRef);
+
+        if (snap.exists()) {
+            appData = snap.data();
+
+            localStorage.setItem(
+                userLocalKey(userId),
+                JSON.stringify(appData)
+            );
+
+            window.renderAll();
+            setSyncState('synced');
+
+            window.showToast(
+                'Datos actualizados desde la nube',
+                'fa-arrows-rotate'
+            );
+        } else {
+            window.showToast(
+                'No hay datos guardados en la nube',
+                'fa-cloud'
+            );
+        }
+
+    } catch (error) {
+        console.error(
+            'Error al actualizar desde la nube:',
+            error
+        );
+
+        window.showToast(
+            'No se pudo actualizar desde la nube',
+            'fa-triangle-exclamation'
+        );
+    }
+};
         };
 
         let currentActiveTab = 'dashboard';
