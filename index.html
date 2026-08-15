@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2026 UPATECO Organizador de Cursada - Tecnicatura Universitaria en IA y Machine Learning</title>
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.webmanifest">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="application-name" content="Organizador de Cursada 2026">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cursada 2026">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -1171,6 +1180,20 @@
             initFirebase();
         };
     </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
+                    console.log('PWA Service Worker registrado:', registration.scope);
+                } catch (error) {
+                    console.error('No se pudo registrar el Service Worker:', error);
+                }
+            });
+        }
+    </script>
+
 </body>
 </html>
 ```eof
