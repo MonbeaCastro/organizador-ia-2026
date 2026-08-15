@@ -846,6 +846,9 @@
 
         function renderAsistenciaView() {
             const tabsContainer = document.getElementById('asistencia-materia-tabs');
+
+            // En móvil: botones más grandes y fáciles de tocar.
+            tabsContainer.className = "mb-6 flex flex-wrap gap-2";
             tabsContainer.innerHTML = MATERIAS_CONFIG.map(m => `
                 <button onclick="window.selectAsistenciaMateria('${m.id}')" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition ${currentAsistenciaMateria === m.id ? 'bg-brand-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
                     ${m.nombre}
@@ -854,6 +857,13 @@
 
             const materia = MATERIAS_CONFIG.find(m => m.id === currentAsistenciaMateria);
             const data = appData[currentAsistenciaMateria] || { asistencias: [] };
+            const asistencias = data.asistencias || [];
+
+            const renderEstadoClass = (estado) => {
+                if (estado === 'alumno_falta') return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
+                if (estado === 'docente_falta') return 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+                return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+            };
 
             const panel = document.getElementById('asistencia-panel-content');
             panel.innerHTML = `
@@ -867,7 +877,54 @@
                     </button>
                 </div>
 
-                <div class="overflow-x-auto">
+                <!-- VISTA MÓVIL: tarjetas -->
+                <div class="md:hidden space-y-3">
+                    ${asistencias.map((a, idx) => `
+                        <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-4 shadow-sm ${a.feriado ? 'opacity-70' : ''}">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold text-slate-500">Clase #${idx + 1}</span>
+                                <button onclick="window.removeClaseAsistencia('${currentAsistenciaMateria}', ${idx})" class="p-2 text-slate-400 hover:text-red-500 rounded-lg transition" title="Eliminar clase">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Fecha</label>
+                                    <input type="date" value="${a.fecha || ''}" onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'fecha', this.value)" class="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-slate-700 dark:text-slate-300">
+                                </div>
+
+                                <div class="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3">
+                                    <div>
+                                        <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">Feriado</p>
+                                        <p class="text-[11px] text-slate-400">${a.feriado ? 'Día marcado como feriado' : 'Clase habitual'}</p>
+                                    </div>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" ${a.feriado ? 'checked' : ''} onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'feriado', this.checked)" class="sr-only peer">
+                                        <div class="w-10 h-6 bg-slate-200 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-brand-600 relative"></div>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Estado de asistencia</label>
+                                    <select onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'estado', this.value)" class="w-full text-sm font-medium rounded-xl p-2.5 border border-slate-200 dark:border-slate-700 ${renderEstadoClass(a.estado)} outline-none">
+                                        <option value="presente" ${a.estado === 'presente' ? 'selected' : ''}>Presente</option>
+                                        <option value="alumno_falta" ${a.estado === 'alumno_falta' ? 'selected' : ''}>Falta Alumno</option>
+                                        <option value="docente_falta" ${a.estado === 'docente_falta' ? 'selected' : ''}>Falta Docente (Sin clase/grabación)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Observaciones / motivo</label>
+                                    <textarea rows="2" placeholder="Ej. Docente no subió material ni clase..." onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'observacion', this.value)" class="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-slate-600 dark:text-slate-300 resize-none">${a.observacion || ''}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- VISTA TABLET/PC: tabla original -->
+                <div class="hidden md:block overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-900/50">
@@ -880,42 +937,36 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
-                            ${(data.asistencias || []).map((a, idx) => {
-                                let badgeBg = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
-                                if (a.estado === 'alumno_falta') badgeBg = 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
-                                if (a.estado === 'docente_falta') badgeBg = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
-
-                                return `
-                                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition ${a.feriado ? 'opacity-60 bg-slate-100/50 dark:bg-slate-800/50' : ''}">
-                                        <td class="p-3 text-center font-semibold text-xs text-slate-500">#${idx + 1}</td>
-                                        <td class="p-3">
-                                            <input type="date" value="${a.fecha || ''}" onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'fecha', this.value)" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5 text-slate-700 dark:text-slate-300 w-full">
-                                        </td>
-                                        <td class="p-3 text-center">
-                                            <label class="inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" ${a.feriado ? 'checked' : ''} onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'feriado', this.checked)" class="sr-only peer">
-                                                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600 relative"></div>
-                                                <span class="ml-2 text-xs font-medium text-slate-500">${a.feriado ? 'Sí' : 'No'}</span>
-                                            </label>
-                                        </td>
-                                        <td class="p-3 text-center">
-                                            <select onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'estado', this.value)" class="text-xs font-medium rounded-lg p-1.5 border border-slate-200 dark:border-slate-700 ${badgeBg} outline-none cursor-pointer">
-                                                <option value="presente" ${a.estado === 'presente' ? 'selected' : ''}>Presente</option>
-                                                <option value="alumno_falta" ${a.estado === 'alumno_falta' ? 'selected' : ''}>Falta Alumno</option>
-                                                <option value="docente_falta" ${a.estado === 'docente_falta' ? 'selected' : ''}>Falta Docente (Sin clase/grabación)</option>
-                                            </select>
-                                        </td>
-                                        <td class="p-3">
-                                            <input type="text" value="${a.observacion || ''}" placeholder="Ej. Docente no subió material ni clase..." onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'observacion', this.value)" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5 text-slate-600 dark:text-slate-300 w-full">
-                                        </td>
-                                        <td class="p-3 text-center">
-                                            <button onclick="window.removeClaseAsistencia('${currentAsistenciaMateria}', ${idx})" class="p-1.5 text-slate-400 hover:text-red-500 rounded transition" title="Eliminar clase">
-                                                <i class="fa-solid fa-trash-can text-xs"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
+                            ${asistencias.map((a, idx) => `
+                                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition ${a.feriado ? 'opacity-60 bg-slate-100/50 dark:bg-slate-800/50' : ''}">
+                                    <td class="p-3 text-center font-semibold text-xs text-slate-500">#${idx + 1}</td>
+                                    <td class="p-3">
+                                        <input type="date" value="${a.fecha || ''}" onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'fecha', this.value)" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5 text-slate-700 dark:text-slate-300 w-full">
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <label class="inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" ${a.feriado ? 'checked' : ''} onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'feriado', this.checked)" class="sr-only peer">
+                                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600 relative"></div>
+                                            <span class="ml-2 text-xs font-medium text-slate-500">${a.feriado ? 'Sí' : 'No'}</span>
+                                        </label>
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <select onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'estado', this.value)" class="text-xs font-medium rounded-lg p-1.5 border border-slate-200 dark:border-slate-700 ${renderEstadoClass(a.estado)} outline-none cursor-pointer">
+                                            <option value="presente" ${a.estado === 'presente' ? 'selected' : ''}>Presente</option>
+                                            <option value="alumno_falta" ${a.estado === 'alumno_falta' ? 'selected' : ''}>Falta Alumno</option>
+                                            <option value="docente_falta" ${a.estado === 'docente_falta' ? 'selected' : ''}>Falta Docente (Sin clase/grabación)</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-3">
+                                        <input type="text" value="${a.observacion || ''}" placeholder="Ej. Docente no subió material ni clase..." onchange="window.updateAsistenciaField('${currentAsistenciaMateria}', ${idx}, 'observacion', this.value)" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1.5 text-slate-600 dark:text-slate-300 w-full">
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <button onclick="window.removeClaseAsistencia('${currentAsistenciaMateria}', ${idx})" class="p-1.5 text-slate-400 hover:text-red-500 rounded transition" title="Eliminar clase">
+                                            <i class="fa-solid fa-trash-can text-xs"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
                         </tbody>
                     </table>
                 </div>
